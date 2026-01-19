@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova - Analisis Sentimen Ulasan</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        
+        :root {
+            
+            --bg-color: #f5f7ff;
+            --text-color: #222222;
+            --text-secondary: #4a5568;
+            --card-gradient: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
+            --primary-gradient: linear-gradient(90deg, #007BFF 0%, #0056b3 100%);
+            --border-color: #d8e2eb;
+            --positive-bg: #d4edda;
+            --positive-text: #155724;
+            --negative-bg: #f8d7da;
+            --negative-text: #721c24;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            _animation: all 0.3s ease;
+        }
+
+        body.dark-mode {
+            --bg-color: #0d1117;
+            --text-color: #eeeeee;
+            --text-secondary: #a0aec0;
+            --card-gradient: linear-gradient(135deg, #3a2d5c 0%, #2a3a69 100%);
+            --primary-gradient: linear-gradient(90deg, #8A2BE2 0%, #007BFF 100%);
+            --border-color: #30363d;
+            --positive-bg: #1a3a20;
+            --positive-text: #a6e3b6;
+            --negative-bg: #4a1d20;
+            --negative-text: #f5b9bd;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            margin: 1;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: var(--transition);
+            padding-top: 85px;
+            padding-left: 40px;
+            padding-right: 40px;
+            padding-bottom: 20px;
+        }
+
+        nav {
+            background: var(--card-gradient);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 55px;
+            box-shadow: var(--shadow);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            transition: var(--transition);
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            font-size: 1.3em;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        #theme-toggle {
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.4em;
+            line-height: 38px;
+            text-align: center;
+            transition: var(--transition);
+            user-select: none;
+        }
+
+        #theme-toggle:hover {
+            opacity: 0.8;
+            transform: scale(1.1) rotate(15deg);
+        }
+
+        .container {
+            margin-bottom: 30px;
+            padding: 24px;
+            background: var(--card-gradient);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--text-color);
+        }
+
+        label {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        textarea {
+            width: calc(100% - 24px);
+            padding: 12px;
+            margin-bottom: 10px;
+            margin-top: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            font-size: 1em;
+            resize: vertical;
+            min-height: 20px;
+            transition: var(--transition);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        button[type="submit"] {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        button[type="submit"]:hover {
+            opacity: 0.8;
+
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+        }
+
+        .result p {
+            margin: 0;
+            word-wrap: break-word;
+        }
+
+        .result h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+
+        .Positive {
+            background-color: var(--positive-bg);
+            color: var(--positive-text);
+            border-color: var(--positive-text);
+        }
+
+        .Negative {
+            background-color: var(--negative-bg);
+            color: var(--negative-text);
+            border-color: var(--negative-text);
+        }
+
+        a.clear-link {
+            color: #dc3545;
+            text-decoration: none;
+            margin-bottom: 15px;
+            display: inline-block;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        a.clear-link:hover {
+            text-decoration: underline;
+        }
+
+        .history-summary {
+            cursor: pointer; 
+            font-weight: 700; 
+            font-size: 1.3em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            list-style: revert;
+        }
+        
+        .history-summary span {
+            padding-left: 5px;
+        }
+
+        .history-summary .clear-link {
+            font-size: 0.7em; 
+            font-weight: 500;
+            margin: 0;
+            position: relative;
+            z-index: 2;
+            padding: 5px; 
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <div class="nav-container">
+            <span class="nav-brand">Kelompok Nova | Felix M. | Paulus S. S. | Marvin O.</span>
+            <button id="theme-toggle" title="Ganti Tema"></button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2>Analisis Sentimen Ulasan Produk E-commerce</h2>
+        <form action="/predict" method="POST">
+            <label for="text">Masukkan ulasan Anda:</label>
+            <textarea name="text" rows="1" required>{{ original_text or '' }}</textarea>
+            <button type="submit">Prediksi</button>
+        </form>
+
+        {% if prediction %}
+                <div class="result {{ prediction }}">
+                        <h3>Hasil Prediksi: <strong>{{ prediction }}</strong></h3>
+                        <p>Teks Anda: <i>"{{ original_text }}"</i></p>
+                                    <p style="font-size: 0.9em; margin-top: 10px; opacity: 0.8;">Keyakinan: <strong>{{
+                    confidence | round(1) }}%</strong></p>
+                    </div>
+                {% endif %}
+    </div>
+
+    {% if history %}
+    <div class="container">
+        <details>
+            <summary class="history-summary">
+                <span>Riwayat Prediksi Terakhir</span>
+                <a href="/clear" class="clear-link">Hapus Riwayat</a>
+            </summary>
+            
+            <div style="margin-top: 20px;">
+                {% for item in history %}
+                <div class="result {{ item.prediction }}" style="margin-bottom: 10px;">
+                    <p style="font-weight: 500;"><strong>{{ item.prediction }}</strong> ({{ item.confidence | round(1) }}%)</p>
+                    <p style="font-size: 0.9em; margin-top: 5px;"><i>"{{ item.text }}"</i></p>
+                </div>
+                {% endfor %}
+            </div>
+        </details>
+    </div>
+    {% endif %}
+
+    <script>
+        const toggleButton = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                body.classList.add('dark-mode');
+                toggleButton.innerHTML = '☀️'; 
+            } else {
+                body.classList.remove('dark-mode');
+                toggleButton.innerHTML = '🌙'; 
+            }
+        }
+
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+        applyTheme(currentTheme);
+
+        toggleButton.addEventListener('click', () => {
+            const newTheme = body.classList.contains('dark-mode') ? 'light' : 'dark';
+            localStorage.setItem('theme', newTheme);
+            applyTheme(newTheme);
+        });
+    </script>
+
+</body>
+
+</html>

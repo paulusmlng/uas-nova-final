@@ -1,4 +1,5 @@
-# Analisis Sentimen Ulasan Produk E-Commerce Menggunakan TF-IDF dan Support Vector Machine (SVM)
+# WEBSITE PERBANDINGAN MODEL CNN DAN LSTM DENGAN MENGGUNAKAN BAYESIAN DAN HYPERBAND OPTIMIZER DALAM ANALISIS SENTIMEN ULASAN PRODUK E-COMMERCE 
+
 
 ## Kelompok Nova
 1. Felix Maicleine - 221111389
@@ -6,7 +7,7 @@
 3. Marvin Octavius - 221112156
 
 ## Masalah & Tujuan
-Proyek ini mengangkat permasalahan Analisis Sentimen pada ulasan teks produk e-commerce dalam Bahasa Indonesia. Tujuannya adalah untuk mengklasifikasikan sebuah ulasan ke dalam kategori sentimen positif atau negatif secara otomatis menggunakan model machine learning (SVM).
+Proyek ini mengangkat permasalahan Analisis Sentimen pada ulasan teks produk e-commerce dalam Bahasa Indonesia. Tujuannya adalah untuk mengklasifikasikan sebuah ulasan ke dalam kategori sentimen positif atau negatif secara otomatis menggunakan model Deep Learning CNN & LSTM. 
 
 Aplikasi ini telah di-deploy ke Railway dan dapat diakses secara publik melalui URL berikut:
 
@@ -17,7 +18,9 @@ Aplikasi ini telah di-deploy ke Railway dan dapat diakses secara publik melalui 
 ## Teknologi yang Digunakan
 
 * **Backend:** Python, Flask, Gunicorn
-* **Machine Learning:** Scikit-learn (SVC, TfidfVectorizer), Pandas
+* **Deep Learning:** TensorFlow & Keras
+* **Hyperparameter Tuning:** Keras Tuner
+* **Feature Extraction:** Gensim model Word2Vec
 * **Preprocessing NLP:** Sastrawi (Stemming, Stopword Removal), NLTK (Tokenization), Kamus Normalisasi (Excel)
 * **Frontend:** HTML5, CSS3 (Desain Responsif)
 * **Deployment:** Railway, Git, GitHub
@@ -29,13 +32,20 @@ Aplikasi ini telah di-deploy ke Railway dan dapat diakses secara publik melalui 
 ```
 uts-sentiment-web/
 ├── app.py                 # Server Flask (backend), logika ML, dan preprocessing
-├── svm_tfidf_model3.pkl   # Model SVM & TF-IDF yang sudah dilatih
+├── model_cnn_tuned.h5     # Model CNN Tuned (Bayesian) yang sudah dilatih (UAS)
+├── model_cnn.h5           # Model CNN Base yang sudah dilatih (UAS)
+├── model_lstm_tuned.h5    # Model LSTM Tuned (Hyperband) yang sudah dilatih (UAS)
+├── model_lstm.h5          # Model LSTM Base yang sudah dilatih (UAS)
 ├── kamuskatabaku.xlsx     # Kamus normalisasi kata baku (dibaca saat startup)
 ├── templates/
 │   └── index.html         # Halaman frontend (UI)
 ├── Procfile               # Perintah start untuk Railway (menjalankan gunicorn)
 ├── requirements.txt       # Daftar dependensi Python untuk di-install server
-└── .gitignore             # File untuk mengabaikan folder venv dan file cache
+├── .gitignore             # File untuk mengabaikan folder venv dan file cache
+├── svm_tfidf_model3.pkl   # Model SVM & TF-IDF yang sudah dilatih (Untuk UTS)
+├── app.py.uts.txt         # App.py versi sebelumnya untuk UTS
+└── index.html.uts.txt     # Index.html versi sebelumnya untuk UTS
+
 ```
 
 ---
@@ -46,6 +56,7 @@ uts-sentiment-web/
     ```bash
     git clone [https://github.com/FelixMaicleine/uts-sentiment-web.git](https://github.com/FelixMaicleine/uts-sentiment-web.git)
     cd uts-sentiment
+    git checkout -b uas-final
     ```
 
 2.  **Buat Virtual Environment**
@@ -76,7 +87,7 @@ uts-sentiment-web/
 
 1.  **Persiapan File:**
     * **`Procfile`**: Dibuat untuk memberi tahu Railway perintah apa yang harus dijalankan untuk memulai server (gunicorn).
-    * **`Prequirements.txt`**: Dibuat untuk memberi tahu Railway dependensi yang diinstal/dibutuhkan.
+    * **`requirements.txt`**: Dibuat untuk memberi tahu Railway dependensi yang diinstal/dibutuhkan.
     * **`.gitignore`**: Dibuat untuk memastikan folder `venv` yang berisi ratusan MB library lokal tidak ikut ter-upload ke GitHub.
 
 2.  **Inisialisasi Git & GitHub:**

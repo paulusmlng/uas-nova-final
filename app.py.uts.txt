@@ -1,12 +1,8 @@
 import re
 import pickle
-import pandas as pd 
+import pandas as pd  
 from flask import Flask, request, render_template, redirect, url_for, session
-import numpy as np
-
-import tensorflow as tf
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+import math
 
 import nltk
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
@@ -16,72 +12,73 @@ from nltk.tokenize import word_tokenize
 nltk.download('punkt')
 nltk.download('punkt_tab')
 
-MAX_LEN = 100 
-
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'MLnova100'
-
 factory_stopword = StopWordRemoverFactory()
 stopword_list_func = factory_stopword.get_stop_words()
 factory_stemmer = StemmerFactory()
 stemmer_func = factory_stemmer.create_stemmer()
+
+def replace_taboo_words(text, kamus_tidak_baku):
+    if isinstance(text, str):
+        words = text.split()
+        replaced_words = []
+        for word in words:
+            if word in kamus_tidak_baku:
+                baku_word = kamus_tidak_baku[word]
+                if isinstance(baku_word, str) and all(char.isalpha() for char in baku_word):
+                    replaced_words.append(baku_word)
+                else:
+                    replaced_words.append(word) 
+            else:
+                replaced_words.append(word)
+        replaced_text = ' '.join(replaced_words)
+    else:
+        replaced_text = ''
+    return replaced_text
 
 print("Memuat kamus normalisasi...")
 try:
     kamus_path = 'kamuskatabaku.xlsx'
     kamus_data = pd.read_excel(kamus_path)
     kamus_tidak_baku_dict = dict(zip(kamus_data['tidak_baku'], kamus_data['kata_baku']))
-    print("Kamus normalisasi berhasil dimuat.")
+    print("✅ Kamus normalisasi berhasil dimuat.")
 except Exception as e:
     print(f"Error memuat kamus: {e}")
     kamus_tidak_baku_dict = {} 
 
-print("Memuat Tokenizer & 4 Model Deep Learning...")
+model_path = 'svm_tfidf_model3.pkl'
+with open(model_path, 'rb') as f:
+    tfidf, svm_model = pickle.load(f)
+print("✅ Model SVM/TF-IDF berhasil dimuat!")
 
-try:
-    with open('tokenizer.pickle', 'rb') as f:
-        tokenizer = pickle.load(f)
-    print("Tokenizer berhasil dimuat.")
-except Exception as e:
-    print(f"Gagal load Tokenizer: {e}")
-
-try:
-    models = {
-        'cnn': load_model('model_cnn.h5'),
-        'lstm': load_model('model_lstm.h5'),
-        'cnn_tuned': load_model('model_cnn_tuned.h5'),
-        'lstm_tuned': load_model('model_lstm_tuned.h5')
-    }
-    print("4 Model berhasil dimuat.")
-except Exception as e:
-    print(f"Gagal load Model: {e}")
-
-def replace_taboo_words(text, kamus_tidak_baku):
-    if isinstance(text, str):
-        words = text.split()
-        replaced_words = [kamus_tidak_baku.get(word, word) for word in words]
-        return ' '.join(replaced_words)
-    return ''
-
-def preprocess_text_dl(text):
+def preprocess_text(text):
     text = text.lower()
     text = re.sub(r'https?://\S+|www\.\S+', '', text)
     text = re.sub(r'<.*?>', '', text) 
+    emoji_pattern = re.compile("["
+                           u"\U0001F600-\U0001F64F" u"\U0001F300-\U0001F5FF"
+                           u"\U0001F680-\U0001F6FF" u"\U0001F700-\U0001F77F"
+                           u"\U0001F780-\U0001F7FF" u"\U0001F800-\U0001F8FF"
+                           u"\U0001F900-\U0001F9FF" u"\U0001FA00-\U0001FA6F"
+                           u"\U0001FA70-\U0001FAFF" u"\U0001F004-\U0001F0CF"
+                           u"\U0001F1E0-\U0001F1FF" "]+", flags=re.UNICODE)
+    text = emoji_pattern.sub(r'', text)
     text = re.sub(r'[^\w\s]', '', text) 
     text = re.sub(r'\d', '', text) 
     text = text.strip()
-    
+
     text = replace_taboo_words(text, kamus_tidak_baku_dict)
+
     tokens = word_tokenize(text)
+
     tokens = [word for word in tokens if word not in stopword_list_func]
+
     text_to_stem = ' '.join(tokens)
     stemmed_text = stemmer_func.stem(text_to_stem)
     
-    sequences = tokenizer.texts_to_sequences([stemmed_text])
-    
-    padded = pad_sequences(sequences, maxlen=MAX_LEN, padding='post', truncating='post')
-    
-    return padded, stemmed_text
+    return stemmed_text
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'MLnova100'
 
 @app.route('/')
 def home():
@@ -89,33 +86,29 @@ def home():
     prediction_result = session.pop('last_prediction', None)
     original_text_submitted = session.pop('last_original_text', None)
     confidence_result = session.pop('last_confidence', None)
-    selected_model = session.pop('last_model', None)
     
     return render_template('index.html',
                            history=history_list,
                            prediction=prediction_result,
                            original_text=original_text_submitted,
-                           confidence=confidence_result,
-                           selected_model=selected_model)
+                           confidence=confidence_result)
     
 @app.route('/predict', methods=['POST'])
 def predict():
     if request.method == 'POST':
         text = request.form['text']
-        model_choice = request.form.get('model_choice', 'cnn') 
         
-        final_input, _ = preprocess_text_dl(text)
+        cleaned_text = preprocess_text(text) 
+        vector = tfidf.transform([cleaned_text])
         
-        selected_model_obj = models.get(model_choice, models['cnn'])
+        prediction = svm_model.predict(vector)[0]
+        score = svm_model.decision_function(vector)[0]
+        probability = 1 / (1 + math.exp(-score))
         
-        score = float(selected_model_obj.predict(final_input)[0][0])
-        
-        if score > 0.5:
-            prediction = 'Positive'
-            confidence_percent = score * 100
-        else:
-            prediction = 'Negative'
-            confidence_percent = (1 - score) * 100
+        if prediction == 'Positive':
+            confidence_percent = probability * 100
+        else: 
+            confidence_percent = (1 - probability) * 100
         
         if 'history' not in session:
             session['history'] = []
@@ -123,8 +116,7 @@ def predict():
         session['history'].insert(0, {
             'text': text,
             'prediction': prediction,
-            'confidence': confidence_percent,
-            'model': model_choice 
+            'confidence': confidence_percent
         })
         
         if len(session['history']) > 10:
@@ -133,12 +125,11 @@ def predict():
         session['last_prediction'] = prediction
         session['last_original_text'] = text
         session['last_confidence'] = confidence_percent
-        session['last_model'] = model_choice
             
         session.modified = True 
         
         return redirect(url_for('home'))
-    
+
 @app.route('/clear')
 def clear_history():
     session.pop('history', None) 
